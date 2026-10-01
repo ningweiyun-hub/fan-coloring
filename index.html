@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>扇形填色</title>
+<title>Fan Coloring</title>
 <style>
-/* 版面：左側筆刷面板 + 右側畫布；畫布永遠整張看得到 */
+/* 版面：寬螢幕＝左側筆刷面板 + 右側畫布；窄螢幕（手機、直向平板）＝畫布在上、面板在下 */
 :root{
   --bg:#e7e9ed; --panel:#f8f9fa; --paper:#ffffff; --ink:#1c2127; --muted:#66707c;
   --line:#d2d7dd; --accent:#2f5bd8; --accent-soft:#e3eafc; --danger:#bf3528;
@@ -20,11 +20,11 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
 
-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
 header h1{font-size:16px;font-weight:600;margin:0 auto 0 0;letter-spacing:.02em}
-.checks{display:flex;gap:14px;color:var(--muted)}
-.checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
-.btn{border:1px solid var(--line);background:var(--paper);border-radius:var(--radius);padding:6px 12px}
+.checks{display:flex;gap:4px 14px;flex-wrap:wrap;color:var(--muted)}
+.check{display:flex;align-items:center;gap:6px;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:var(--radius);padding:6px 12px;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -34,13 +34,11 @@ main{flex:1;min-height:0;display:flex}
 aside{width:270px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
 section h2{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.08em;margin:0 0 8px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
-.row .btn{flex:1}
+.row .btn{flex:1 1 auto;white-space:nowrap}
 
 .tray{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .brush{position:relative;aspect-ratio:1;border-radius:var(--radius);border:1px solid var(--line);padding:0;background:var(--paper) center/cover no-repeat;overflow:visible}
 .brush[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}
-.brush .del{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:var(--paper);font-size:11px;line-height:16px;text-align:center;display:none}
-.brush:hover .del,.brush:focus-within .del{display:block}
 .brush .tag{position:absolute;left:3px;bottom:3px;padding:0 5px;border-radius:4px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;line-height:16px}
 .wide{width:100%;margin-top:10px}
 .text{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--paper)}
@@ -50,89 +48,146 @@ section h2{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.08e
 .seg button{flex:1;border:0;background:none;padding:6px 8px}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
-.field{display:grid;grid-template-columns:3.2em 1fr 3.4em;align-items:center;gap:8px;margin-top:10px}
+.field{display:grid;grid-template-columns:minmax(3.2em,max-content) 1fr 3.4em;align-items:center;gap:8px;margin-top:10px}
 .field output{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .field input[type=range]{width:100%;accent-color:var(--accent)}
 .note{color:var(--muted);font-size:12px;margin:8px 0 0}
+section .check{margin-top:10px}
 
 .work{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px}
-.stage{position:relative;width:min(100%,calc((100vh - 130px) * var(--ratio)));aspect-ratio:var(--ratio);background:var(--paper);border-radius:4px;box-shadow:0 1px 3px rgba(28,33,39,.18);cursor:crosshair;user-select:none;-webkit-user-select:none}
+.stage{position:relative;width:min(100%,calc((100vh - 130px) * var(--ratio)));aspect-ratio:var(--ratio);background:var(--paper);border-radius:4px;box-shadow:0 1px 3px rgba(28,33,39,.18);cursor:crosshair;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.stage.dragpaint{touch-action:pinch-zoom}
 .stage canvas,.stage img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 .stage.drop{outline:3px dashed var(--accent);outline-offset:4px}
 #status{color:var(--muted);min-height:1.5em;text-align:center}
+.statusrow{display:flex;align-items:center;justify-content:center;gap:12px;width:100%}
+#undo2{display:none;flex:none}
 
-@media (max-width:760px){
-  body{height:auto}
+/* 匯入圖片時的裁切視窗 */
+.modal{position:fixed;inset:0;z-index:20;background:rgba(28,33,39,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.dialog{background:var(--panel);border-radius:12px;padding:16px;width:min(720px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.dialog h2{font-size:15px;font-weight:600;margin:0}
+.dialog h2 span+span{color:var(--muted);font-weight:400}
+.dialog .note{margin:0}
+.cropwrap{display:flex;justify-content:center}
+.cropbox{position:relative;flex:none;overflow:hidden;background:var(--paper);cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.cropbox img{display:block;width:100%;height:100%;pointer-events:none}
+.sel{position:absolute;border:2px solid #fff;outline:1px solid var(--accent);box-shadow:0 0 0 9999px rgba(28,33,39,.5)}
+.sel i{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--accent)}
+.sel i:nth-child(1){left:-8px;top:-8px}
+.sel i:nth-child(2){right:-8px;top:-8px}
+.sel i:nth-child(3){left:-8px;bottom:-8px}
+.sel i:nth-child(4){right:-8px;bottom:-8px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* 觸控裝置：按鈕加大、輸入框不觸發 iOS 自動放大 */
+@media (pointer:coarse){
+  .btn,.seg button{min-height:42px}
+  .check{min-height:36px}
+  .text,select.btn{font-size:16px}
+  .field input[type=range]{height:32px}
+}
+
+/* 手機、直向平板：畫布在上，面板在下排成多欄 */
+@media (max-width:900px){
+  html,body{height:auto}
+  body{display:block}
+  header{padding:8px 16px}
+  header #undo{display:none}
+  #undo2{display:block}
+  .statusrow{justify-content:space-between}
+  #status{text-align:left}
   main{flex-direction:column}
-  aside{width:auto;border-right:0;border-bottom:1px solid var(--line)}
-  .tray{grid-template-columns:repeat(6,1fr)}
+  .work{order:-1;gap:6px;padding:12px 16px 8px;background:var(--bg)}
   .stage{width:100%}
+  aside{width:auto;border-right:0;border-top:1px solid var(--line);overflow:visible;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px 24px;align-items:start;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  aside>section:first-child{grid-column:1/-1}
+  .tray{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
+}
+/* 手機：標題列排成整齊的三列 */
+@media (max-width:560px){
+  header h1{flex:1}
+  header #clear,header #export{flex:1}
+  .checks{order:3;width:100%}
+}
+/* 螢幕夠高時畫布固定在上面，調筆刷時看得到結果 */
+@media (max-width:900px) and (min-height:560px){
+  .work{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line)}
+  .stage{width:min(100%,calc(46vh * var(--ratio)))}
 }
 </style>
 </head>
 <body>
 <header>
-  <h1>扇形填色</h1>
+  <h1 data-t="title">Fan Coloring</h1>
+  <select class="btn" id="lang" aria-label="Language">
+    <option value="en">English</option>
+    <option value="nl">Nederlands</option>
+    <option value="zh">中文</option>
+  </select>
   <div class="checks">
-    <label><input type="checkbox" id="showLetters" checked> 顯示字母</label>
-    <label><input type="checkbox" id="showLines" checked> 顯示線條</label>
+    <label class="check"><input type="checkbox" id="showLetters" checked> <span data-t="showLetters"></span></label>
+    <label class="check"><input type="checkbox" id="showLines" checked> <span data-t="showLines"></span></label>
   </div>
-  <button class="btn" id="undo" disabled>復原</button>
-  <button class="btn" id="clear">全部清除</button>
-  <button class="btn primary" id="export">匯出 PNG</button>
+  <button class="btn" id="undo" data-t="undo" disabled></button>
+  <button class="btn" id="clear" data-t="clear"></button>
+  <button class="btn primary" id="export" data-t="export"></button>
 </header>
 
 <main>
   <aside>
     <section>
-      <h2>筆刷</h2>
+      <h2 data-t="brushes"></h2>
       <div class="row">
-        <button class="btn primary" id="importBtn">匯入圖片</button>
-        <button class="btn" id="colorBtn">加入純色</button>
+        <button class="btn primary" id="importBtn" data-t="importImg"></button>
+        <button class="btn" id="colorBtn" data-t="addColor"></button>
       </div>
       <input type="file" id="file" accept="image/*" multiple hidden>
       <input type="color" id="colorPick" value="#2f5bd8" hidden>
       <div class="tray" id="tray"></div>
-      <button class="btn wide" id="autoBtn" hidden>照字母自動填</button>
-      <p class="empty" id="trayEmpty">還沒有筆刷。匯入圖片，或把圖片直接拖進視窗。</p>
+      <button class="btn wide" id="autoBtn" data-t="autoFill" hidden></button>
+      <button class="btn wide" id="restoreBtn" data-t="restore" hidden></button>
+      <p class="empty" id="trayEmpty" data-t="trayEmpty"></p>
     </section>
 
     <section id="nameSettings" hidden>
-      <h2><label for="nameEdit">筆刷名稱</label></h2>
-      <input type="text" class="text" id="nameEdit" maxlength="40" placeholder="例如：橄欖綠段染" autocomplete="off">
+      <h2><label for="nameEdit" data-t="brushName"></label></h2>
+      <input type="text" class="text" id="nameEdit" maxlength="40" autocomplete="off">
+      <button class="btn wide" id="delBtn" data-t="deleteBrush"></button>
     </section>
 
     <section id="imgSettings" hidden>
-      <h2>這支筆刷的圖怎麼放</h2>
+      <h2 data-t="imgPlacement"></h2>
       <div class="seg" id="mode">
-        <button data-v="cover">每格放一張</button>
-        <button data-v="tile">整片連續鋪</button>
+        <button data-v="cover" data-t="modeCover"></button>
+        <button data-v="tile" data-t="modeTile"></button>
       </div>
-      <div class="field"><label for="scale">大小</label><input type="range" id="scale" min="20" max="300" step="5"><output id="scaleOut"></output></div>
-      <div class="field"><label for="rot">旋轉</label><input type="range" id="rot" min="0" max="360" step="1"><output id="rotOut"></output></div>
-      <p class="note">調整會即時套用到所有用這支筆刷填過的格子。</p>
+      <div class="field"><label for="scale" data-t="size"></label><input type="range" id="scale" min="20" max="300" step="5"><output id="scaleOut"></output></div>
+      <div class="field"><label for="rot" data-t="rotate"></label><input type="range" id="rot" min="0" max="360" step="1"><output id="rotOut"></output></div>
+      <p class="note" data-t="liveNote"></p>
     </section>
 
     <section id="colorSettings" hidden>
-      <h2>這支筆刷的顏色</h2>
-      <div class="field"><label for="colorEdit">顏色</label><input type="color" id="colorEdit"><span></span></div>
+      <h2 data-t="brushColor"></h2>
+      <div class="field"><label for="colorEdit" data-t="color"></label><input type="color" id="colorEdit"><span></span></div>
     </section>
 
     <section>
-      <h2>點一下要填多少</h2>
+      <h2 data-t="scopeTitle"></h2>
       <div class="seg" id="scope">
-        <button data-v="one">只填這一格</button>
-        <button data-v="letter">同字母全部</button>
+        <button data-v="one" data-t="scopeOne"></button>
+        <button data-v="letter" data-t="scopeLetter"></button>
       </div>
     </section>
 
     <section>
-      <h2>工具</h2>
+      <h2 data-t="tool"></h2>
       <div class="seg" id="tool">
-        <button data-v="fill">填色</button>
-        <button data-v="erase">橡皮擦</button>
+        <button data-v="fill" data-t="fill"></button>
+        <button data-v="erase" data-t="erase"></button>
       </div>
-      <p class="note">按住滑鼠拖過去可以連續填。</p>
+      <label class="check" id="dragWrap" hidden><input type="checkbox" id="dragPaint"> <span data-t="dragPaint"></span></label>
+      <p class="note" id="toolNote"></p>
     </section>
   </aside>
 
@@ -142,11 +197,113 @@ section h2{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.08e
       <img id="linesImg" alt="">
       <img id="lettersImg" alt="">
     </div>
-    <div id="status" role="status">載入中…</div>
+    <div class="statusrow">
+      <div id="status" role="status">Loading…</div>
+      <button class="btn" id="undo2" data-t="undo" disabled></button>
+    </div>
   </div>
 </main>
 
+<div class="modal" id="cropModal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+    <h2 id="cropTitle"><span data-t="cropTitle"></span> <span id="cropCount"></span></h2>
+    <p class="note" data-t="cropHint"></p>
+    <div class="cropwrap"><div class="cropbox" id="cropBox"><img id="cropImg" alt=""><div class="sel" id="cropSel" hidden><i></i><i></i><i></i><i></i></div></div></div>
+    <div class="actions">
+      <button class="btn" id="cropCancel" data-t="cancel"></button>
+      <button class="btn" id="cropWhole" data-t="cropWhole"></button>
+      <button class="btn primary" id="cropUse" data-t="cropUse" disabled></button>
+    </div>
+  </div>
+</div>
+
 <script>
+/* ---------- 介面文字（英文／荷蘭文／中文） ---------- */
+const I18N={
+en:{
+  title:'Fan Coloring',showLetters:'Show letters',showLines:'Show lines',undo:'Undo',clear:'Clear all',
+  confirmAgain:'Press again to confirm',export:'Export PNG',brushes:'Brushes',importImg:'Import image',addColor:'Add color',
+  trayEmpty:'No brushes yet. Import an image, or drag one into the window.',autoFill:'Fill by letter',
+  brushName:'Brush name',deleteBrush:'Delete this brush',deleteConfirm:'Press again: its cells are cleared too',
+  imgPlacement:'How the image is placed',modeCover:'One per cell',modeTile:'Continuous',size:'Size',rotate:'Rotate',
+  liveNote:'Changes apply straight away to every cell filled with this brush.',
+  brushColor:'Brush color',color:'Color',scopeTitle:'One click fills',scopeOne:'This cell',scopeLetter:'Same letter',
+  tool:'Tool',fill:'Fill',erase:'Eraser',dragPaint:'Drag to fill',
+  dragNote:'Hold the mouse button and drag to fill several cells.',
+  touchNote:'Off: tap to fill, drag to scroll. On: drag across cells to fill them. Pinch to zoom works either way.',
+  loading:'Loading…',needBrush:'Pick or import a brush first, then choose a cell.',
+  filled:'{n} / {total} cells filled',hintStart:'Choose a cell to fill it with the selected brush.',
+  hintNoBrush:'Import an image as a brush, then choose cells to fill.',
+  badFiles:'{n} file(s) could not be read. Use JPG or PNG (convert iPhone HEIC first).',
+  added:'{n} brush(es) added. Choose a cell to start.',colorAdded:'Color brush added. You can change its color in the panel.',
+  nameUpdated:'Brush name updated.',allDone:'Everything is already filled by letter.',
+  exported:'PNG exported. It contains exactly what is on screen; untick “Show letters” to leave them out.',
+  cropTitle:'Choose the part to use',cropHint:'Drag on the image to mark an area. Drag inside it to move it, or drag a corner to resize.',
+  cropUse:'Use selection',cropWhole:'Use whole image',cancel:'Cancel',
+  restore:'Restore deleted built-in brushes',restored:'{n} brush(es) restored.',
+  imgBrush:'Image brush',colorBrush:'Color brush'
+},
+nl:{
+  title:'Waaier inkleuren',showLetters:'Letters tonen',showLines:'Lijnen tonen',undo:'Ongedaan maken',clear:'Alles wissen',
+  confirmAgain:'Druk nogmaals om te bevestigen',export:'PNG exporteren',brushes:'Penselen',importImg:'Afbeelding importeren',addColor:'Kleur toevoegen',
+  trayEmpty:'Nog geen penselen. Importeer een afbeelding of sleep er een naar het venster.',autoFill:'Vullen op letter',
+  brushName:'Naam van penseel',deleteBrush:'Dit penseel verwijderen',deleteConfirm:'Druk nogmaals: de vakken worden ook gewist',
+  imgPlacement:'Plaatsing van de afbeelding',modeCover:'Eén per vak',modeTile:'Doorlopend',size:'Grootte',rotate:'Draaien',
+  liveNote:'Wijzigingen gelden direct voor alle vakken die met dit penseel zijn gevuld.',
+  brushColor:'Kleur van penseel',color:'Kleur',scopeTitle:'Eén klik vult',scopeOne:'Dit vak',scopeLetter:'Zelfde letter',
+  tool:'Gereedschap',fill:'Vullen',erase:'Gum',dragPaint:'Slepen om te vullen',
+  dragNote:'Houd de muisknop ingedrukt en sleep om meerdere vakken te vullen.',
+  touchNote:'Uit: tik om te vullen, sleep om te scrollen. Aan: sleep over de vakken om ze te vullen. Knijpen om te zoomen werkt altijd.',
+  loading:'Laden…',needBrush:'Kies of importeer eerst een penseel en kies dan een vak.',
+  filled:'{n} / {total} vakken gevuld',hintStart:'Kies een vak om het met het gekozen penseel te vullen.',
+  hintNoBrush:'Importeer een afbeelding als penseel en kies dan vakken om te vullen.',
+  badFiles:'{n} bestand(en) konden niet worden gelezen. Gebruik JPG of PNG (zet iPhone-HEIC eerst om).',
+  added:'{n} penseel/penselen toegevoegd. Kies een vak om te beginnen.',colorAdded:'Kleurpenseel toegevoegd. Je kunt de kleur aanpassen in het paneel.',
+  nameUpdated:'Naam van penseel bijgewerkt.',allDone:'Alles is al op letter gevuld.',
+  exported:'PNG geëxporteerd. Je krijgt precies wat op het scherm staat; vink “Letters tonen” uit om ze weg te laten.',
+  cropTitle:'Kies het deel dat je wilt gebruiken',cropHint:'Sleep over de afbeelding om een gebied te markeren. Sleep erbinnen om het te verplaatsen, of sleep een hoek om de grootte te wijzigen.',
+  cropUse:'Selectie gebruiken',cropWhole:'Hele afbeelding gebruiken',cancel:'Annuleren',
+  restore:'Verwijderde standaardpenselen terugzetten',restored:'{n} penseel/penselen teruggezet.',
+  imgBrush:'Afbeeldingspenseel',colorBrush:'Kleurpenseel'
+},
+zh:{
+  title:'扇形填色',showLetters:'顯示字母',showLines:'顯示線條',undo:'復原',clear:'全部清除',
+  confirmAgain:'再按一次確認',export:'匯出 PNG',brushes:'筆刷',importImg:'匯入圖片',addColor:'加入純色',
+  trayEmpty:'還沒有筆刷。匯入圖片，或把圖片直接拖進視窗。',autoFill:'照字母自動填',
+  brushName:'筆刷名稱',deleteBrush:'刪除這支筆刷',deleteConfirm:'再按一次：它填的格子會一起清掉',
+  imgPlacement:'這支筆刷的圖怎麼放',modeCover:'每格放一張',modeTile:'整片連續鋪',size:'大小',rotate:'旋轉',
+  liveNote:'調整會即時套用到所有用這支筆刷填過的格子。',
+  brushColor:'這支筆刷的顏色',color:'顏色',scopeTitle:'點一下要填多少',scopeOne:'只填這一格',scopeLetter:'同字母全部',
+  tool:'工具',fill:'填色',erase:'橡皮擦',dragPaint:'拖曳連續填',
+  dragNote:'按住滑鼠拖過去可以連續填。',
+  touchNote:'關：點一下填色，拖曳是捲動頁面。開：手指拖過格子連續填。兩指縮放隨時可用。',
+  loading:'載入中…',needBrush:'先選一支筆刷或匯入圖片，再點格子。',
+  filled:'已填 {n} / {total} 格',hintStart:'點格子就會填上目前選的筆刷。',
+  hintNoBrush:'先匯入圖片當筆刷，再點格子填滿。',
+  badFiles:'有 {n} 個檔案讀不了。請用 JPG 或 PNG（iPhone 的 HEIC 要先轉檔）。',
+  added:'已加入 {n} 支筆刷。點格子開始填。',colorAdded:'已加入純色筆刷，可在面板改顏色。',
+  nameUpdated:'已更新筆刷名稱。',allDone:'已經都照字母填好了。',
+  exported:'已匯出 PNG（畫面上看到什麼就匯出什麼；不要字母就先取消「顯示字母」）。',
+  cropTitle:'選擇要當筆刷的區域',cropHint:'在圖片上拖曳框出區域。在框內拖曳可以移動，拖角落可以調整大小。',
+  cropUse:'使用框選區域',cropWhole:'使用整張圖',cancel:'取消',
+  restore:'還原被刪掉的內建筆刷',restored:'已還原 {n} 支筆刷。',
+  imgBrush:'圖片筆刷',colorBrush:'純色筆刷'
+}};
+/* 內建毛線筆刷的名稱；使用者改過名就以使用者的為準 */
+const YARN_NAMES={
+  'yarn-A':{en:'A Greige (solid)',nl:'A Grijsbeige (effen)',zh:'A 米灰（素色）'},
+  'yarn-B':{en:'B Dark olive variegated',nl:'B Donker olijf gemêleerd',zh:'B 深橄欖段染'},
+  'yarn-C':{en:'C Emerald variegated',nl:'C Smaragdgroen gemêleerd',zh:'C 翡翠綠段染'},
+  'yarn-D':{en:'D Mist green (solid)',nl:'D Mistgroen (effen)',zh:'D 霧綠（素色）'},
+  'yarn-E':{en:'E Lime green (solid)',nl:'E Limoengroen (effen)',zh:'E 萊姆綠（素色）'},
+  'yarn-F':{en:'F Olive variegated',nl:'F Olijfgroen gemêleerd',zh:'F 橄欖綠段染'},
+  'yarn-G':{en:'G Khaki beige variegated',nl:'G Kakibeige gemêleerd',zh:'G 卡其米段染'},
+  'yarn-H':{en:'H Dark green (solid)',nl:'H Donkergroen (effen)',zh:'H 深綠（素色）'},
+  'yarn-lace':{en:'Untitled yarn',nl:'Naamloos garen',zh:'未命名毛線'},
+  'yarn-x2':{en:'Untitled yarn 2',nl:'Naamloos garen 2',zh:'未命名毛線 2'},
+  'yarn-x3':{en:'Untitled yarn 3',nl:'Naamloos garen 3',zh:'未命名毛線 3'}
+};
+
 function boot(DATA){
 const W=DATA.W,H=DATA.H,LETTERS=' ABCDEFGH',BUILTIN=window.YARN||[];
 const $=id=>document.getElementById(id);
@@ -157,16 +314,37 @@ paint.width=W;paint.height=H;
 
 let ids=null;            // 每個像素屬於哪一格（0 = 圖外）
 const regions=[];        // regions[r] = {x0,y0,x1,y1,letter}
-let brushes=[];          // {id,type:'img'|'color',color,blob,url,canvas,mode,scale,rot,label,name}
+let brushes=[];          // {id,type:'img'|'color',color,blob,url,canvas,mode,scale,rot,label,name}（name 只存使用者自訂的）
 let removedBuiltins=[];  // 被刪掉的內建筆刷 id，重開時不再加回來
 let fills={};            // 格子編號 -> 筆刷 id
 let current=null,scope='one',tool='fill';
 const undoStack=[];
 
-const say=t=>{statusEl.textContent=t;};
 const uid=()=>Math.random().toString(36).slice(2,9);
 const brushById=id=>brushes.find(b=>b.id===id);
 const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
+const pref={
+  get(k){try{return localStorage.getItem('fan-coloring-'+k);}catch(e){return null;}},
+  set(k,v){try{localStorage.setItem('fan-coloring-'+k,v);}catch(e){}}
+};
+
+/* ---------- 語言 ---------- */
+let lang=I18N[pref.get('lang')]?pref.get('lang'):'en';
+const t=(k,vars)=>{let s=I18N[lang][k]??I18N.en[k]??k;for(const v in vars||{})s=s.replace('{'+v+'}',vars[v]);return s;};
+let lastSay=['loading'];
+const say=(k,vars)=>{lastSay=[k,vars];statusEl.textContent=t(k,vars);};
+const defaultName=b=>YARN_NAMES[b.id]?YARN_NAMES[b.id][lang]:'';
+const displayName=b=>b.name||defaultName(b)||t(b.type==='img'?'imgBrush':'colorBrush');
+const touch=navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;
+function applyLang(){
+  document.documentElement.lang=lang==='zh'?'zh-Hant':lang;
+  document.title=t('title');
+  $('lang').value=lang;
+  for(const el of document.querySelectorAll('[data-t]'))el.textContent=t(el.dataset.t);
+  $('toolNote').textContent=t(touch?'touchNote':'dragNote');
+  statusEl.textContent=t(...lastSay);
+}
+$('lang').onchange=e=>{lang=e.target.value;pref.set('lang',lang);applyLang();refreshUI();};
 
 /* ---------- 儲存（IndexedDB；開不了就只是不記憶） ---------- */
 let db=null;
@@ -263,30 +441,57 @@ function apply(r){
   }
   return changed;
 }
-let stroke=null;   // {before,changed,last}
+const canPaint=()=>{
+  if(tool==='fill'&&!brushById(current)){say('needBrush');return false;}
+  return true;
+};
+/* 滑鼠：按下就填、拖曳連續填。觸控：預設「點一下才填」（拖曳留給捲動頁面），
+   打開「拖曳連續填」後跟滑鼠一樣；兩指縮放時會取消這一筆。 */
+let dragPaint=touch&&pref.get('drag')==='1';
+let stroke=null;   // {id,before,changed,last}
+let tap=null;      // {id,x,y}
 stage.addEventListener('pointerdown',e=>{
   if(!ids||e.button!==0)return;
-  if(tool==='fill'&&!brushById(current)){say('先在左邊匯入圖片或加入純色，再點格子。');return;}
+  if(stroke){if(e.pointerId!==stroke.id)cancelStroke();return;}
+  if(e.pointerType!=='mouse'&&!dragPaint){tap=tap?null:{id:e.pointerId,x:e.clientX,y:e.clientY};return;}
+  if(!canPaint())return;
   const r=regionAt(e);
-  stroke={before:{...fills},changed:false,last:r};
+  stroke={id:e.pointerId,before:{...fills},changed:false,last:r};
   if(r&&apply(r))stroke.changed=true;
-  if(e.pointerType==='mouse')stage.setPointerCapture(e.pointerId);
-  else endStroke();
+  try{stage.setPointerCapture(e.pointerId);}catch(err){}
 });
 stage.addEventListener('pointermove',e=>{
-  if(!stroke)return;
+  if(!stroke||e.pointerId!==stroke.id)return;
   const r=regionAt(e);
   if(r===stroke.last)return;
   stroke.last=r;
   if(r&&apply(r))stroke.changed=true;
 });
-function endStroke(){
+function commit(before){
+  undoStack.push(before);if(undoStack.length>100)undoStack.shift();
+  save();refreshUI();describe();
+}
+function endStroke(e){
+  if(tap&&e.pointerId===tap.id){
+    const moved=Math.hypot(e.clientX-tap.x,e.clientY-tap.y);tap=null;
+    if(moved<12&&canPaint()){
+      const r=regionAt(e),before={...fills};
+      if(r&&apply(r))commit(before);
+    }
+    return;
+  }
+  if(!stroke||e.pointerId!==stroke.id)return;
+  if(stroke.changed)commit(stroke.before);
+  stroke=null;
+}
+function cancelStroke(){
+  tap=null;
   if(!stroke)return;
-  if(stroke.changed){undoStack.push(stroke.before);if(undoStack.length>100)undoStack.shift();save();refreshUI();describe();}
+  if(stroke.changed)setFills(stroke.before);
   stroke=null;
 }
 stage.addEventListener('pointerup',endStroke);
-stage.addEventListener('pointercancel',endStroke);
+stage.addEventListener('pointercancel',cancelStroke);
 
 function undo(){
   if(!undoStack.length)return;
@@ -294,7 +499,7 @@ function undo(){
 }
 function describe(){
   const n=Object.keys(fills).length;
-  say(n?`已填 ${n} / ${regions.length-1} 格`:'點格子就會填上目前選的筆刷。');
+  if(n)say('filled',{n,total:regions.length-1});else say('hintStart');
 }
 
 /* ---------- 筆刷 ---------- */
@@ -312,16 +517,108 @@ function addColorBrush(color,o={}){
   const b={id:o.id||uid(),type:'color',color,name:o.name};
   brushes.push(b);return b;
 }
+// 匯入前讓使用者框選要用的區域；回傳 null（取消）、'whole'（整張）或 {x,y,w,h}（0–1 的比例）
+function cropDialog(img,idx,total){
+  return new Promise(res=>{
+    const modal=$('cropModal'),box=$('cropBox'),selEl=$('cropSel');
+    const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+    let sel=null,drag=null;
+    $('cropImg').src=img.src;
+    $('cropCount').textContent=total>1?`${idx} / ${total}`:'';
+    modal.hidden=false;
+    const fit=()=>{
+      const k=Math.min(box.parentElement.clientWidth/img.naturalWidth,Math.min(innerHeight*0.55,560)/img.naturalHeight);
+      box.style.width=img.naturalWidth*k+'px';box.style.height=img.naturalHeight*k+'px';
+    };
+    const draw=()=>{
+      selEl.hidden=!sel;$('cropUse').disabled=!sel;
+      if(!sel)return;
+      selEl.style.left=sel.x*100+'%';selEl.style.top=sel.y*100+'%';
+      selEl.style.width=sel.w*100+'%';selEl.style.height=sel.h*100+'%';
+    };
+    const pos=e=>{const rc=box.getBoundingClientRect();return{x:clamp((e.clientX-rc.left)/rc.width),y:clamp((e.clientY-rc.top)/rc.height),rc};};
+    box.onpointerdown=e=>{
+      const p=pos(e);
+      try{box.setPointerCapture(e.pointerId);}catch(err){}
+      if(sel){
+        const tx=18/p.rc.width,ty=18/p.rc.height;
+        const x0=Math.abs(p.x-sel.x)<tx,x1=Math.abs(p.x-sel.x-sel.w)<tx,y0=Math.abs(p.y-sel.y)<ty,y1=Math.abs(p.y-sel.y-sel.h)<ty;
+        if((x0||x1)&&(y0||y1)){drag={ax:x1?sel.x:sel.x+sel.w,ay:y1?sel.y:sel.y+sel.h};return;}
+        if(p.x>sel.x&&p.x<sel.x+sel.w&&p.y>sel.y&&p.y<sel.y+sel.h){drag={move:true,dx:p.x-sel.x,dy:p.y-sel.y};return;}
+      }
+      drag={ax:p.x,ay:p.y};
+    };
+    box.onpointermove=e=>{
+      if(!drag)return;
+      const p=pos(e);
+      if(drag.move){sel.x=clamp(p.x-drag.dx,0,1-sel.w);sel.y=clamp(p.y-drag.dy,0,1-sel.h);}
+      else sel={x:Math.min(drag.ax,p.x),y:Math.min(drag.ay,p.y),w:Math.abs(p.x-drag.ax),h:Math.abs(p.y-drag.ay)};
+      draw();
+    };
+    box.onpointerup=box.onpointercancel=()=>{
+      drag=null;
+      const rc=box.getBoundingClientRect();
+      if(sel&&(sel.w*rc.width<8||sel.h*rc.height<8)){sel=null;draw();}
+    };
+    const onKey=e=>{if(e.key==='Escape')close(null);};
+    const close=v=>{
+      modal.hidden=true;removeEventListener('resize',fit);removeEventListener('keydown',onKey);
+      box.onpointerdown=box.onpointermove=box.onpointerup=box.onpointercancel=null;
+      res(v);
+    };
+    $('cropCancel').onclick=()=>close(null);
+    $('cropWhole').onclick=()=>close('whole');
+    $('cropUse').onclick=()=>close(sel);
+    addEventListener('resize',fit);addEventListener('keydown',onKey);
+    fit();draw();
+  });
+}
+let importing=false;
 async function importFiles(files){
-  let ok=0,bad=0,last=null;
-  for(const f of files){
-    if(!f.type.startsWith('image/')){bad++;continue;}
-    try{last=await addImageBrush(f);ok++;}catch(e){bad++;}
+  if(importing)return;
+  importing=true;
+  const imgs=files.filter(f=>f.type.startsWith('image/'));
+  let ok=0,bad=files.length-imgs.length,last=null;
+  for(let i=0;i<imgs.length;i++){
+    const url=URL.createObjectURL(imgs[i]);
+    try{
+      const img=await loadImg(url);
+      const pick=await cropDialog(img,i+1,imgs.length);
+      if(!pick)continue;
+      let blob=imgs[i];
+      if(pick!=='whole'){
+        const sx=Math.round(pick.x*img.naturalWidth),sy=Math.round(pick.y*img.naturalHeight);
+        const sw=Math.max(1,Math.round(pick.w*img.naturalWidth)),sh=Math.max(1,Math.round(pick.h*img.naturalHeight));
+        const k=Math.min(1,1600/Math.max(sw,sh));
+        const c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(sw*k));c.height=Math.max(1,Math.round(sh*k));
+        c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+        blob=await new Promise(r=>c.toBlob(r,'image/png'));
+      }
+      last=await addImageBrush(blob);ok++;
+    }catch(e){bad++;}
+    finally{URL.revokeObjectURL(url);}
   }
+  importing=false;
   if(last){current=last.id;tool='fill';}
   refreshUI();save();
-  if(bad)say(`有 ${bad} 個檔案讀不了。請用 JPG 或 PNG（iPhone 的 HEIC 要先轉檔）。`);
-  else if(ok)say(`已加入 ${ok} 支筆刷。點格子開始填。`);
+  if(bad)say('badFiles',{n:bad});
+  else if(ok)say('added',{n:ok});
+}
+// 補上還沒有的內建筆刷（被使用者刪掉的不補），並照內建順序排在最前面；回傳補了幾支
+async function addBuiltins(){
+  let n=0;
+  for(const y of BUILTIN){
+    if(brushById(y.id)||removedBuiltins.includes(y.id))continue;
+    const bin=atob(y.src.split(',')[1]),u=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    try{await addImageBrush(new Blob([u],{type:'image/jpeg'}),{id:y.id,label:y.label});n++;}catch(e){}
+  }
+  if(n){
+    const rank=b=>{const i=BUILTIN.findIndex(y=>y.id===b.id);return i<0?BUILTIN.length:i;};
+    brushes=brushes.map((b,i)=>[b,i]).sort((a,b)=>rank(a[0])-rank(b[0])||a[1]-b[1]).map(x=>x[0]);
+  }
+  return n;
 }
 function removeBrush(id){
   const next={...fills};
@@ -343,25 +640,37 @@ function seg(el,value,onPick){
     btn.onclick=()=>onPick(btn.dataset.v);
   }
 }
+// 需要按兩次才執行的按鈕（清除、刪除）；回傳「取消待確認狀態」的函式
+function twoStep(btn,labelKey,confirmKey,canRun,run){
+  let timer=null;
+  const reset=()=>{clearTimeout(timer);timer=null;btn.dataset.t=labelKey;btn.textContent=t(labelKey);btn.classList.remove('confirm');};
+  btn.onclick=()=>{
+    if(!timer){
+      if(!canRun())return;
+      btn.dataset.t=confirmKey;btn.textContent=t(confirmKey);btn.classList.add('confirm');
+      timer=setTimeout(reset,3000);return;
+    }
+    reset();run();
+  };
+  return reset;
+}
 function refreshUI(){
   const tray=$('tray');tray.textContent='';
   for(const b of brushes){
     const el=document.createElement('button');
-    el.className='brush';el.title=b.name||(b.type==='img'?'圖片筆刷':'純色筆刷');
+    el.className='brush';el.title=displayName(b);el.setAttribute('aria-label',displayName(b));
     el.setAttribute('aria-pressed',b.id===current&&tool==='fill');
     if(b.type==='img')el.style.backgroundImage=`url(${b.url})`;else el.style.backgroundColor=b.color;
-    el.onclick=()=>{current=b.id;tool='fill';refreshUI();save();};
-    const del=document.createElement('span');
-    del.className='del';del.textContent='×';del.title='刪除這支筆刷（用它填的格子會一起清掉）';
-    del.onclick=e=>{e.stopPropagation();removeBrush(b.id);};
+    el.onclick=()=>{resetDel();current=b.id;tool='fill';refreshUI();save();};
     if(b.label){const tag=document.createElement('span');tag.className='tag';tag.textContent=b.label;el.appendChild(tag);}
-    el.appendChild(del);tray.appendChild(el);
+    tray.appendChild(el);
   }
   $('trayEmpty').hidden=brushes.length>0;
   $('autoBtn').hidden=!brushes.some(x=>x.label);
+  $('restoreBtn').hidden=!removedBuiltins.length;
   const b=brushById(current);
   $('nameSettings').hidden=!b;
-  if(b&&document.activeElement!==$('nameEdit'))$('nameEdit').value=b.name||'';
+  if(b&&document.activeElement!==$('nameEdit'))$('nameEdit').value=displayName(b);
   $('imgSettings').hidden=!(b&&b.type==='img');
   $('colorSettings').hidden=!(b&&b.type==='color');
   if(b&&b.type==='img'){
@@ -372,43 +681,44 @@ function refreshUI(){
   if(b&&b.type==='color')$('colorEdit').value=b.color;
   seg($('scope'),scope,v=>{scope=v;refreshUI();save();});
   seg($('tool'),tool,v=>{tool=v;refreshUI();});
-  $('undo').disabled=!undoStack.length;
+  $('undo').disabled=$('undo2').disabled=!undoStack.length;
 }
 $('scale').oninput=e=>{const b=brushById(current);if(!b)return;b.scale=e.target.value/100;$('scaleOut').textContent=e.target.value+'%';rerenderBrush(b.id);};
 $('rot').oninput=e=>{const b=brushById(current);if(!b)return;b.rot=+e.target.value;$('rotOut').textContent=b.rot+'°';rerenderBrush(b.id);};
 $('scale').onchange=$('rot').onchange=save;
 $('colorEdit').oninput=e=>{const b=brushById(current);if(!b)return;b.color=e.target.value;rerenderBrush(b.id);};
 $('colorEdit').onchange=()=>{refreshUI();save();};
-$('nameEdit').oninput=e=>{const b=brushById(current);if(b)b.name=e.target.value.trim();};
-$('nameEdit').onchange=()=>{refreshUI();save();say('已更新筆刷名稱。');};
+$('nameEdit').oninput=e=>{
+  const b=brushById(current);if(!b)return;
+  const v=e.target.value.trim();
+  b.name=v&&v!==defaultName(b)?v:undefined;
+};
+$('nameEdit').onchange=()=>{refreshUI();save();say('nameUpdated');};
+const resetDel=twoStep($('delBtn'),'deleteBrush','deleteConfirm',()=>!!brushById(current),()=>removeBrush(current));
 
 $('importBtn').onclick=()=>$('file').click();
 $('file').onchange=e=>{importFiles([...e.target.files]);e.target.value='';};
-$('colorBtn').onclick=()=>{const b=addColorBrush($('colorPick').value);current=b.id;tool='fill';refreshUI();save();say('已加入純色筆刷，可在左邊改顏色。');};
-$('undo').onclick=undo;
+$('colorBtn').onclick=()=>{const b=addColorBrush($('colorPick').value);current=b.id;tool='fill';refreshUI();save();say('colorAdded');};
+$('undo').onclick=$('undo2').onclick=undo;
+$('restoreBtn').onclick=async()=>{removedBuiltins=[];const n=await addBuiltins();refreshUI();save();say('restored',{n});};
 $('autoBtn').onclick=()=>{
   const map={};
   for(const b of brushes)if(b.label&&!map[b.label])map[b.label]=b.id;
   const next={...fills};let n=0;
   for(let r=1;r<regions.length;r++){const id=map[regions[r].letter];if(id&&next[r]!==id){next[r]=id;n++;}}
-  if(!n){say('已經都照字母填好了。');return;}
+  if(!n){say('allDone');return;}
   undoStack.push({...fills});setFills(next);save();refreshUI();describe();
 };
 $('showLetters').onchange=e=>{lettersImg.hidden=!e.target.checked;};
 $('showLines').onchange=e=>{linesImg.hidden=!e.target.checked;};
-
-let clearTimer=null;
-$('clear').onclick=e=>{
-  const btn=e.currentTarget;
-  if(!clearTimer){
-    if(!Object.keys(fills).length)return;
-    btn.textContent='再按一次確認';btn.classList.add('confirm');
-    clearTimer=setTimeout(resetClear,3000);return;
-  }
-  resetClear();
+twoStep($('clear'),'clear','confirmAgain',()=>Object.keys(fills).length>0,()=>{
   undoStack.push({...fills});setFills({});save();refreshUI();describe();
-};
-function resetClear(){clearTimeout(clearTimer);clearTimer=null;$('clear').textContent='全部清除';$('clear').classList.remove('confirm');}
+});
+
+$('dragWrap').hidden=!touch;
+$('dragPaint').checked=dragPaint;
+stage.classList.toggle('dragpaint',dragPaint);
+$('dragPaint').onchange=e=>{dragPaint=e.target.checked;pref.set('drag',dragPaint?'1':'0');stage.classList.toggle('dragpaint',dragPaint);};
 
 $('export').onclick=()=>{
   const c=document.createElement('canvas');c.width=W;c.height=H;
@@ -417,12 +727,20 @@ $('export').onclick=()=>{
   x.drawImage(paint,0,0);
   if($('showLines').checked)x.drawImage(linesImg,0,0,W,H);
   if($('showLetters').checked)x.drawImage(lettersImg,0,0,W,H);
-  c.toBlob(blob=>{
+  c.toBlob(async blob=>{
+    // 手機、平板：用系統的分享面板（可以存到相簿）；不支援就照一般下載
+    if(touch&&navigator.canShare){
+      const file=new File([blob],'fan-coloring.png',{type:'image/png'});
+      if(navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file]});say('exported');return;}
+        catch(err){if(err.name==='AbortError')return;}
+      }
+    }
     const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);a.download='扇形填色.png';
+    a.href=URL.createObjectURL(blob);a.download='fan-coloring.png';
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-    say('已匯出 PNG（畫面上看到什麼就匯出什麼；不要字母就先取消「顯示字母」）。');
+    say('exported');
   },'image/png');
 };
 
@@ -430,9 +748,10 @@ addEventListener('dragover',e=>{e.preventDefault();stage.classList.add('drop');}
 addEventListener('dragleave',e=>{if(!e.relatedTarget)stage.classList.remove('drop');});
 addEventListener('drop',e=>{e.preventDefault();stage.classList.remove('drop');if(e.dataTransfer.files.length)importFiles([...e.dataTransfer.files]);});
 addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])];if(f.length)importFiles(f);});
-addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('input[type=text]'))return;if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){e.preventDefault();undo();}});
+addEventListener('keydown',e=>{if(!$('cropModal').hidden||(e.target.matches&&e.target.matches('input[type=text]')))return;if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){e.preventDefault();undo();}});
 
 /* ---------- 啟動 ---------- */
+applyLang();
 (async()=>{
   linesImg.src=DATA.lines;lettersImg.src=DATA.letters;
   const lab=await loadImg(DATA.labels);
@@ -447,10 +766,14 @@ addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('input[type
     const g=regions[r]||(regions[r]={x0:W,y0:H,x1:0,y1:0,letter:LETTERS[d[i*4+1]].trim()});
     if(xx<g.x0)g.x0=xx;if(xx>g.x1)g.x1=xx;if(y<g.y0)g.y0=y;if(y>g.y1)g.y1=y;
   }
+  c.width=c.height=0;
   db=await openDB();
   const st=await dbGet('state');
   if(st){
     for(const b of st.brushes||[]){
+      // 舊版把內建名稱也存了下來；跟任何語言的預設名相同就當作沒改過
+      const names=YARN_NAMES[b.id];
+      if(names&&Object.values(names).includes(b.name))b.name=undefined;
       try{if(b.type==='img')await addImageBrush(b.blob,b);else addColorBrush(b.color,b);}catch(e){}
     }
     removedBuiltins=st.removedBuiltins||[];
@@ -459,16 +782,11 @@ addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('input[type
     for(const r in st.fills||{})if(regions[r]&&brushById(st.fills[r]))next[r]=st.fills[r];
     setFills(next);
   }
-  for(const y of BUILTIN){
-    if(brushById(y.id)||removedBuiltins.includes(y.id))continue;
-    const bin=atob(y.src.split(',')[1]),u=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
-    try{await addImageBrush(new Blob([u],{type:'image/jpeg'}),y);}catch(e){}
-  }
+  await addBuiltins();
   current=st&&brushById(st.current)?st.current:(brushes[0]?.id??null);
   refreshUI();
   if(Object.keys(fills).length)describe();
-  else say(brushes.length?'點格子就會填上目前選的筆刷。':'先在左邊匯入圖片當筆刷，再點格子填滿。');
+  else say(brushes.length?'hintStart':'hintNoBrush');
   window.__fan={regions,get fills(){return fills;},get brushes(){return brushes;}};
 })();
 }
