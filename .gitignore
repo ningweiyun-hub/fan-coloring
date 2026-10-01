@@ -1,0 +1,3 @@
+# 原始素材只留在本機
+source-*
+.DS_Store
