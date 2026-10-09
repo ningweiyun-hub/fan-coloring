@@ -6,10 +6,11 @@ A small tool for filling a fan-shaped outline with image brushes. One HTML file,
 
 ## How it works
 
-1. Pick a brush (11 yarn brushes are built in), or choose **Import image** to add your own. You can mark which part of the image to use.
-2. Choose a cell to fill it. With a mouse, hold and drag to fill several cells.
-3. Turn on **Same letter** to fill every cell with that letter at once.
-4. **Export PNG** saves exactly what is on screen.
+1. Pick a drawing: the fan, one of two stained-glass windows, or your own line drawing.
+2. Pick a brush (27 yarn brushes are built in, including the 16 Blue Sky Fibers Prairie colours), or choose **Import image** to add your own. You can mark which part of the image to use.
+3. Choose a cell to fill it. With a mouse, hold and drag to fill several cells.
+4. On the fan, turn on **Same letter** to fill every cell with that letter at once.
+5. **Export PNG** saves exactly what is on screen.
 
 You can also colour your own picture: **Upload line drawing** turns any drawing with dark, closed lines on a white background into fillable cells.
 
